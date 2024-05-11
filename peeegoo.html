@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Event Planner</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f8f9fa; /* Light gray background */
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ff6b6b; /* Red */
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+      }
+      40% {
+        transform: translateY(-30px);
+      }
+      60% {
+        transform: translateY(-15px);
+      }
+    }
+
+    #createEventBtn {
+      background-color: #ffcc29; /* Yellow */
+      color: #343a40; /* Dark gray */
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4); /* Black with transparency */
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      border-radius: 10px;
+      position: relative;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    form label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #343a40; /* Dark gray */
+    }
+
+    form input[type="text"],
+    form input[type="date"],
+    form input[type="time"],
+    form textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box; /* Make sure padding and border are included in the element's total width and height */
+    }
+
+    form input[type="submit"] {
+      background-color: #28a745; /* Green */
+      color: #fff; /* White */
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    form input[type="submit"]:hover {
+      background-color: #218838; /* Darker green on hover */
+    }
+
+    .event {
+      background-color: #f8d7da; /* Pink */
+      color: #721c24; /* Dark red */
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+
+    .event h2 {
+      margin-top: 0;
+      color: #721c24; /* Dark red */
+    }
+
+    .event p {
+      margin-bottom: 5px;
+    }
+
+    .event p strong {
+      color: #721c24; /* Dark red */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Social Event Planner</h1>
+    <button id="createEventBtn">Create Event</button>
+    <div id="eventsContainer"></div>
+  </div>
+
+  <div id="eventModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Create Event</h2>
+      <form id="eventForm">
+        <label for="eventName">Event Name:</label>
+        <input type="text" id="eventName" name="eventName" required>
+        <label for="eventDate">Date:</label>
+        <input type="date" id="eventDate" name="eventDate" required>
+        <label for="eventTime">Time:</label>
+        <input type="time" id="eventTime" name="eventTime" required>
+        <label for="eventLocation">Location:</label>
+        <input type="text" id="eventLocation" name="eventLocation" required>
+        <label for="eventDescription">Description:</label>
+        <textarea id="eventDescription" name="eventDescription" rows="4" required></textarea>
+        <button type="submit">Create</button>
+      </form>
+    </div>
+  </div>
+
+  <audio id="backgroundMusic" loop>
+    <source src="https://www.soundjay.com/ambient/metro-interior-1.wav" type="audio/wav">
+    Your browser does not support the audio element.
+  </audio>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const createEventBtn = document.getElementById('createEventBtn');
+      const eventForm = document.getElementById('eventForm');
+      const eventsContainer = document.getElementById('eventsContainer');
+      const eventModal = document.getElementById('eventModal');
+      const closeBtn = document.getElementsByClassName('close')[0];
+
+      createEventBtn.addEventListener('click', function() {
+        eventModal.style.display = 'block';
+      });
+
+      closeBtn.addEventListener('click', function() {
+        eventModal.style.display = 'none';
+      });
+
+      window.addEventListener('click', function(event) {
+        if (event.target == eventModal) {
+          eventModal.style.display = 'none';
+        }
+      });
+
+      // Fetch events from backend and display them
+      fetch('http://localhost:5000/events')
+        .then(response => response.json())
+        .then(events => {
+          events.forEach(event => {
+            displayEvent(event);
+          });
+        })
+        .catch(error => console.error('Error fetching events:', error));
+
+      eventForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(eventForm);
+        const eventData = {};
+        formData.forEach((value, key) => {
+          eventData[key] = value;
+        });
+
+        fetch('http://localhost:5000/events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(eventData)
+        })
+        .then(response => response.json())
+        .then(data => {
+          eventData.id = data.id;
+          displayEvent(eventData);
+          eventModal.style.display = 'none';
+        })
+        .catch(error => console.error('Error creating event:', error));
+      });
+	  
+	  
+
+      function displayEvent(eventData) {
+        const eventDiv = document.createElement('div');
+        eventDiv.classList.add('event');
+        eventDiv.innerHTML = `
+          <h2>${eventData.eventName}</h2>
+          <p><strong>Date:</strong> ${eventData.eventDate}</p>
+          <p><strong>Time:</strong> ${eventData.eventTime}</p>
+          <p><strong>Location:</strong> ${eventData.eventLocation}</p>
+          <p><strong>Description:</strong> ${eventData.eventDescription}</p>
+        `;
+        eventsContainer.appendChild(eventDiv);
+      }
+    });
+  </script>
+   <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const backgroundMusic = document.getElementById('backgroundMusic');
+
+      // Start playing background music when the user interacts with the page
+      document.body.addEventListener('click', function() {
+        backgroundMusic.play().catch(function(error) {
+          console.error('Failed to play background music:', error);
+        });
+        // Remove the event listener to prevent multiple play attempts
+        document.body.removeEventListener('click', arguments.callee);
+      });
+    });
+  </script>
+</body>
+</html>
